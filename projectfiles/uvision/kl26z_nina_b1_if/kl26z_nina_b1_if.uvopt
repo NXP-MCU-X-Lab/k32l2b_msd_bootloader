@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ProjectOpt xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="project_optx.xsd">
+	<SchemaVersion>1.0</SchemaVersion>
+	<Target>
+		<TargetName>kl26z_nina_b1_if</TargetName>
+		<ToolsetNumber>0x4</ToolsetNumber>
+		<ToolsetName>ARM-ADS</ToolsetName>
+		<TargetOption>
+			<DebugOpt>
+				<uSim>0</uSim>
+				<uTrg>1</uTrg>
+				<nTsel>12</nTsel>
+				<pMon>BIN\CMSIS_AGDI.dll</pMon>
+			</DebugOpt>
+			<TargetDriverDllRegistry>
+				<SetRegEntry>
+					<Number>0</Number>
+					<Key>CMSIS_AGDI</Key>
+					<Name>ULP2CM3(-O2510 -S0 -C0 -FO15 -FD20000000 -FC800 -FN1 -FF0MK_P128_48MHZ -FS00 -FL020000)</Name>
+				</SetRegEntry>
+			</TargetDriverDllRegistry>
+		</TargetOption>
+	</Target>
+</ProjectOpt>
