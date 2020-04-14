@@ -25,9 +25,7 @@
 
 const char *board_id = "0000";
 
-// Warning - changing the interface start will break backwards compatibility
-COMPILER_ASSERT(DAPLINK_ROM_IF_START == KB(32));
-COMPILER_ASSERT(DAPLINK_ROM_IF_SIZE == KB(95));
+
 
 // kl26z128 target information
 target_cfg_t target_device = {
@@ -38,7 +36,7 @@ target_cfg_t target_device = {
     .sector_cnt     = (DAPLINK_ROM_IF_SIZE / 1024),
     .flash_start    = DAPLINK_ROM_IF_START,
     .flash_end      = DAPLINK_ROM_IF_START + DAPLINK_ROM_IF_SIZE,
-    .ram_start      = 0x1FFFF000,
-    .ram_end        = 0x20003000,
+    .ram_start      = 0x1FFFE000,
+    .ram_end        = 0x20006000,
     /* .flash_algo not needed for bootloader */
 };

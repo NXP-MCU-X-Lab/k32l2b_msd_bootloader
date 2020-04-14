@@ -38,7 +38,7 @@ void gpio_init(void)
     PIN_HID_LED_PORT->PCR[PIN_HID_LED_BIT] = PORT_PCR_MUX(1);
     PIN_MSC_LED_PORT->PCR[PIN_MSC_LED_BIT] = PORT_PCR_MUX(1);
     PIN_CDC_LED_PORT->PCR[PIN_CDC_LED_BIT] = PORT_PCR_MUX(1);
-    PIN_SW_RESET_PORT->PCR[PIN_SW_RESET_BIT] = PORT_PCR_MUX(1);
+    PIN_SW_RESET_PORT->PCR[PIN_SW_RESET_BIT] = PORT_PCR_MUX(1) | PORT_PCR_PE_MASK | PORT_PCR_PS_MASK;
     PIN_POWER_EN_PORT->PCR[PIN_POWER_EN_BIT] = PORT_PCR_MUX(1);
     // led off
     gpio_set_hid_led(GPIO_LED_OFF);
@@ -85,7 +85,10 @@ uint8_t gpio_get_reset_btn_no_fwrd(void)
 
 uint8_t gpio_get_reset_btn_fwrd(void)
 {
-    return (PIN_SW_RESET_GPIO->PDIR & PIN_SW_RESET) ? 0 : 1;
+    static volatile  int i = 0;
+    i = (PIN_SW_RESET_GPIO->PDIR & PIN_SW_RESET) ? 0 : 1;
+    i = i;
+    return i;
 }
 
 void gpio_set_board_power(bool powerEnabled)
