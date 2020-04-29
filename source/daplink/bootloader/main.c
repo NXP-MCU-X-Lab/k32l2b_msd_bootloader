@@ -232,7 +232,7 @@ int main(void)
     // init leds and button
     gpio_init();
     // init settings
-    config_init();
+//    config_init();
 
     // check for invalid app image or rst button press. Should be checksum or CRC but NVIC validation is better than nothing.
     // If the interface has set the hold in bootloader setting don't jump to app

@@ -36,7 +36,7 @@
 
 // FAT16 limitations +- safety margin
 #define FAT_CLUSTERS_MAX (65525 - 100)
-#define FAT_CLUSTERS_MIN (4086 + 100)
+#define FAT_CLUSTERS_MIN (16 + 0)
 
 typedef struct {
     uint8_t boot_sector[11];
@@ -288,7 +288,7 @@ void vfs_init(const vfs_filename_t drive_name, uint32_t disk_size)
     init_complete = false;
     // Initialize MBR
     memcpy(&mbr, &mbr_tmpl, sizeof(mbr_t));
-    total_sectors = ((disk_size + KB(64)) / mbr.bytes_per_sector);
+    total_sectors = ((disk_size + KB(0)) / mbr.bytes_per_sector);
     // Make sure this is the right size for a FAT16 volume
     if (total_sectors < FAT_CLUSTERS_MIN * mbr.sectors_per_cluster) {
         util_assert(0);

@@ -47,7 +47,7 @@
             <InvalidFlash>1</InvalidFlash>
           </TargetStatus>
           <OutputDirectory>.\build\</OutputDirectory>
-          <OutputName>kl26z_bl</OutputName>
+          <OutputName>k32l2b_bl</OutputName>
           <CreateExecutable>1</CreateExecutable>
           <CreateLib>0</CreateLib>
           <CreateHexFile>1</CreateHexFile>
@@ -422,9 +422,9 @@
           <GroupName>board</GroupName>
           <Files>
             <File>
-              <FileName>kl26z_bl.c</FileName>
+              <FileName>k32l2b_bl.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\source\board\kl26z_bl.c</FilePath>
+              <FilePath>..\..\..\source\board\k32l2b_bl.c</FilePath>
             </File>
           </Files>
         </Group>
