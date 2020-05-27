@@ -28,6 +28,8 @@
 #include "macro.h"
 #include "util.h"
 
+#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+    
 // Virtual file system driver
 // Limitations:
 //   - files must be contiguous
@@ -36,7 +38,7 @@
 
 // FAT16 limitations +- safety margin
 #define FAT_CLUSTERS_MAX (65525 - 100)
-#define FAT_CLUSTERS_MIN (16 + 0)
+#define FAT_CLUSTERS_MIN (4086 + 100)
 
 typedef struct {
     uint8_t boot_sector[11];
@@ -117,7 +119,6 @@ static void file_change_cb_stub(const vfs_filename_t filename, vfs_file_change_t
 static uint32_t cluster_to_sector(uint32_t cluster_idx);
 static bool filename_valid(const vfs_filename_t filename);
 static bool filename_character_valid(char character);
-static void set_init_done(void);
 
 // If sector size changes update comment below
 COMPILER_ASSERT(0x0200 == VFS_SECTOR_SIZE);
@@ -149,8 +150,71 @@ static const mbr_t mbr_tmpl = {
     // unused by msft - just a label (FAT, FAT12, FAT16)
     /*char[8] */.file_system_type           = {'F', 'A', 'T', '1', '6', ' ', ' ', ' '},
 
-    /* Executable boot code that starts the operating system */
+    /* BOOTSTRAP SOURCE CODE AND PAYLOAD GENERATOR
+     * PRINTS OUT WARNING MESSAGE ON ACCIDENTAL BOOT FROM DAPLINK
+     1                                  [BITS 16]
+     2                                  %define BLSTART 0x3E
+     3                                  %define BLLEN 448
+     4
+     5 00000000 FA                      cli
+     6 00000001 B8C007                  mov ax, 07C0h
+     7 00000004 052001                  add ax, 288
+     8 00000007 8ED0                    mov ss, ax
+     9 00000009 BC0010                  mov sp, 4096
+    10 0000000C B8C007                  mov ax, 07C0h
+    11 0000000F 8ED8                    mov ds, ax
+    12 00000011 BE[6D00]                mov si,message+BLSTART
+    13 00000014 E80B00                  call print
+    14 00000017 EBFE                    jmp $
+    15
+    16                                  printc:
+    17 00000019 B40E                        mov ah, 0x0E
+    18 0000001B B700                        mov bh, 0x00
+    19 0000001D B307                        mov bl, 0x07
+    20 0000001F CD10                        int 0x10
+    21 00000021 C3                          ret
+    22
+    23                                  print:
+    24                                      nextc:
+    25 00000022 8A04                            mov al, [si]
+    26 00000024 46                              inc si
+    27 00000025 08C0                            or al, al
+    28 00000027 7405                            jz return
+    29 00000029 E8EDFF                          call printc
+    30 0000002C EBF4                            jmp nextc
+    31                                      return:
+    32 0000002E C3                              ret
+    33
+    34 0000002F 504C45415345205245-     message db 'PLEASE REMOVE THE ARM MBED DAPLINK USB DEVICE AND REBOOT THE SYSTEM..', 0
+    35 00000038 4D4F56452054484520-
+    36 00000041 41524D204D42454420-
+    37 0000004A 4441504C494E4B2055-
+    38 00000053 534220444556494345-
+    39 0000005C 20414E44205245424F-
+    40 00000065 4F5420544845205359-
+    41 0000006E 5354454D2E2E00
+    42
+    43 00000075 00<rept>                times BLLEN-($-$$) db 0
+
+    USE BELOW SCRIPT TO COMPILE BOOTSTRAP AND GENERATE PAYLOAD:
+    #!/usr/bin/env python
+    import os
+    os.system('nasm -f bin -o print.bin -l print.lst print.asm')
+    print(open('print.lst','r').read())
+    x=1
+    for c in open('print.bin','rb').read():
+            print('0x%02X, '%c, end='' if x % 16 else '\n')
+            x += 1
+     */
     /*uint8_t[448]*/.bootstrap = {
+        0xFA, 0xB8, 0xC0, 0x07, 0x05, 0x20, 0x01, 0x8E, 0xD0, 0xBC, 0x00, 0x10, 0xB8, 0xC0, 0x07, 0x8E,
+        0xD8, 0xBE, 0x6D, 0x00, 0xE8, 0x0B, 0x00, 0xEB, 0xFE, 0xB4, 0x0E, 0xB7, 0x00, 0xB3, 0x07, 0xCD,
+        0x10, 0xC3, 0x8A, 0x04, 0x46, 0x08, 0xC0, 0x74, 0x05, 0xE8, 0xED, 0xFF, 0xEB, 0xF4, 0xC3, 0x50,
+        0x4C, 0x45, 0x41, 0x53, 0x45, 0x20, 0x52, 0x45, 0x4D, 0x4F, 0x56, 0x45, 0x20, 0x54, 0x48, 0x45,
+        0x20, 0x41, 0x52, 0x4D, 0x20, 0x4D, 0x42, 0x45, 0x44, 0x20, 0x44, 0x41, 0x50, 0x4C, 0x49, 0x4E,
+        0x4B, 0x20, 0x55, 0x53, 0x42, 0x20, 0x44, 0x45, 0x56, 0x49, 0x43, 0x45, 0x20, 0x41, 0x4E, 0x44,
+        0x20, 0x52, 0x45, 0x42, 0x4F, 0x4F, 0x54, 0x20, 0x54, 0x48, 0x45, 0x20, 0x53, 0x59, 0x53, 0x54,
+        0x45, 0x4D, 0x2E, 0x2E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -171,17 +235,9 @@ static const mbr_t mbr_tmpl = {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
     },
-    // Set signature to 0xAA55 to make drive bootable
-    /*uint16_t*/.signature = 0x0000,
+    // Signature MUST be 0xAA55 to maintain compatibility (i.e. with Android).
+    /*uint16_t*/.signature = 0xAA55,
 };
 
 enum virtual_media_idx_t {
@@ -203,7 +259,7 @@ const virtual_media_t virtual_media_tmpl[] = {
     /* Raw filesystem contents follow */
 };
 // Keep virtual_media_idx_t in sync with virtual_media_tmpl
-COMPILER_ASSERT(MEDIA_IDX_COUNT == ELEMENTS_IN_ARRAY(virtual_media_tmpl));
+//COMPILER_ASSERT(MEDIA_IDX_COUNT == ARRAY_SIZE(virtual_media_tmpl));
 
 static const FatDirectoryEntry_t root_dir_entry = {
     /*uint8_t[11] */ .filename = {""},
@@ -239,14 +295,12 @@ mbr_t mbr;
 file_allocation_table_t fat;
 virtual_media_t virtual_media[16];
 root_dir_t dir_current;
-FatDirectoryEntry_t dir_initial[VFS_MAX_FILES];
 uint8_t file_count;
 vfs_file_change_cb_t file_change_cb;
 uint32_t virtual_media_idx;
 uint32_t fat_idx;
 uint32_t dir_idx;
 uint32_t data_start;
-bool init_complete;
 
 // Virtual media must be larger than the template
 COMPILER_ASSERT(sizeof(virtual_media) > sizeof(virtual_media_tmpl));
@@ -259,7 +313,7 @@ static void write_fat(file_allocation_table_t *fat, uint32_t idx, uint16_t val)
     high_idx = idx * 2 + 1;
 
     // Assert that this is still within the fat table
-    if (high_idx >= ELEMENTS_IN_ARRAY(fat->f)) {
+    if (high_idx >= ARRAY_SIZE(fat->f)) {
         util_assert(0);
         return;
     }
@@ -279,16 +333,14 @@ void vfs_init(const vfs_filename_t drive_name, uint32_t disk_size)
     fat_idx = 0;
     memset(&virtual_media, 0, sizeof(virtual_media));
     memset(&dir_current, 0, sizeof(dir_current));
-    memset(&dir_initial, 0, sizeof(dir_initial));
     dir_idx = 0;
     file_count = 0;
     file_change_cb = file_change_cb_stub;
     virtual_media_idx = 0;
     data_start = 0;
-    init_complete = false;
     // Initialize MBR
     memcpy(&mbr, &mbr_tmpl, sizeof(mbr_t));
-    total_sectors = ((disk_size + KB(0)) / mbr.bytes_per_sector);
+    total_sectors = ((disk_size + KB(64)) / mbr.bytes_per_sector);
     // Make sure this is the right size for a FAT16 volume
     if (total_sectors < FAT_CLUSTERS_MIN * mbr.sectors_per_cluster) {
         util_assert(0);
@@ -299,10 +351,10 @@ void vfs_init(const vfs_filename_t drive_name, uint32_t disk_size)
     }
     if (total_sectors >= 0x10000) {
         mbr.total_logical_sectors = 0;
-        mbr.big_sectors_on_drive  = total_sectors;  
+        mbr.big_sectors_on_drive  = total_sectors;
     } else {
         mbr.total_logical_sectors = total_sectors;
-        mbr.big_sectors_on_drive  = 0;  
+        mbr.big_sectors_on_drive  = 0;
     }
     // FAT table will likely be larger than needed, but this is allowed by the
     // fat specification
@@ -316,7 +368,7 @@ void vfs_init(const vfs_filename_t drive_name, uint32_t disk_size)
     virtual_media_idx = MEDIA_IDX_COUNT;
     data_start = 0;
 
-    for (i = 0; i < ELEMENTS_IN_ARRAY(virtual_media_tmpl); i++) {
+    for (i = 0; i < ARRAY_SIZE(virtual_media_tmpl); i++) {
         data_start += virtual_media[i].length;
     }
 
@@ -374,7 +426,7 @@ vfs_file_t vfs_create_file(const vfs_filename_t filename, vfs_read_cb_t read_cb,
     }
 
     // Update directory entry
-    if (dir_idx >= ELEMENTS_IN_ARRAY(dir_current.f)) {
+    if (dir_idx >= ARRAY_SIZE(dir_current.f)) {
         util_assert(0);
         return VFS_FILE_INVALID;
     }
@@ -388,7 +440,7 @@ vfs_file_t vfs_create_file(const vfs_filename_t filename, vfs_read_cb_t read_cb,
     de->first_cluster_low_16 = (first_cluster >> 0) & 0xFFFF;
 
     // Update virtual media
-    if (virtual_media_idx >= ELEMENTS_IN_ARRAY(virtual_media)) {
+    if (virtual_media_idx >= ARRAY_SIZE(virtual_media)) {
         util_assert(0);
         return VFS_FILE_INVALID;
     }
@@ -452,9 +504,7 @@ void vfs_read(uint32_t requested_sector, uint8_t *buf, uint32_t num_sectors)
     memset(buf, 0, num_sectors * VFS_SECTOR_SIZE);
     current_sector = 0;
 
-    set_init_done();
-
-    for (i = 0; i < ELEMENTS_IN_ARRAY(virtual_media); i++) {
+    for (i = 0; i < ARRAY_SIZE(virtual_media); i++) {
         uint32_t vm_sectors = virtual_media[i].length / VFS_SECTOR_SIZE;
         uint32_t vm_start = current_sector;
         uint32_t vm_end = current_sector + vm_sectors;
@@ -486,8 +536,6 @@ void vfs_write(uint32_t requested_sector, const uint8_t *buf, uint32_t num_secto
     uint8_t i = 0;
     uint32_t current_sector;
     current_sector = 0;
-
-    set_init_done();
 
     for (i = 0; i < virtual_media_idx; i++) {
         uint32_t vm_sectors = virtual_media[i].length / VFS_SECTOR_SIZE;
@@ -562,24 +610,18 @@ static uint32_t read_fat(uint32_t sector_offset, uint8_t *data, uint32_t num_sec
 
 static uint32_t read_dir(uint32_t sector_offset, uint8_t *data, uint32_t num_sectors)
 {
-    uint32_t start_index;
-    uint32_t copy_size;
-
     if ((sector_offset + num_sectors) * VFS_SECTOR_SIZE > sizeof(dir_current)) {
         // Trying to read too much of the root directory
         util_assert(0);
         return 0;
     }
 
-    // Zero buffer
-    memset(data, 0, num_sectors * VFS_SECTOR_SIZE);
-    start_index = sector_offset * VFS_SECTOR_SIZE / sizeof(FatDirectoryEntry_t);
+    // Zero buffer data is VFS_SECTOR_SIZE max
+    memset(data, 0, VFS_SECTOR_SIZE);
 
-    // Copy data if anything can be copied
-    if (start_index < ELEMENTS_IN_ARRAY(dir_initial)) {
-        util_assert(sizeof(dir_initial) > sector_offset * VFS_SECTOR_SIZE);
-        copy_size = sizeof(dir_initial) - sector_offset * VFS_SECTOR_SIZE;
-        memcpy(data, &dir_initial[start_index], copy_size);
+    if (sector_offset == 0) { //Handle the first 512 bytes
+        // Copy data that is actually created in the directory
+        memcpy(data, &dir_current.f[0], dir_idx*sizeof(FatDirectoryEntry_t));
     }
 
     return num_sectors * VFS_SECTOR_SIZE;
@@ -702,12 +744,4 @@ static bool filename_character_valid(char character)
 
     // All of the checks have passed so this is a valid file name character
     return true;
-}
-
-static void set_init_done(void)
-{
-    if (!init_complete) {
-        memcpy(&dir_initial, &dir_current, MIN(sizeof(dir_initial), sizeof(dir_current)));
-        init_complete = true;
-    }
 }

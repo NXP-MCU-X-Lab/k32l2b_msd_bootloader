@@ -25,3 +25,9 @@ https://github.com/ARMmbed/DAPLink
 
 
 
+20200527：
+
+New feature: firmware can be shown when enter MSD boot loader mode. there will be a file called "FW_DATA.BIN" which is the content of last programmed image(started at 0x0000_8000).
+
+
+
