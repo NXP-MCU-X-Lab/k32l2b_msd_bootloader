@@ -88,6 +88,13 @@ static uint32_t read_file_firmware(uint32_t sector_offset, uint8_t *data, uint32
     return 512;
 }
 
+static uint32_t read_config_firmware(uint32_t sector_offset, uint8_t *data, uint32_t num_sectors)
+{
+    memcpy(data, (void*)(DAPLINK_ROM_CONFIG_USER_START + sector_offset*512), 512);
+    return 512;
+}
+
+
 void vfs_user_build_filesystem()
 {
     uint32_t file_size;
@@ -104,6 +111,7 @@ void vfs_user_build_filesystem()
     
     /* firmware.bin */
     vfs_create_file("FW_DATA BIN", read_file_firmware, 0, DAPLINK_ROM_IF_SIZE);
+    vfs_create_file("CF_DATA BIN", read_config_firmware, 0, DAPLINK_ROM_CONFIG_USER_SIZE);
     
 //    // FAIL.TXT
 //    if (vfs_mngr_get_transfer_status() != ERROR_SUCCESS) {

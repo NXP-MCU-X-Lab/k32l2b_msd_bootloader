@@ -88,15 +88,43 @@ static inline uint32_t daplink_debug_print(const char *format, ...)
 
 #else
 
-static inline uint32_t daplink_debug_print(const char *format, ...)
-{
-    return 1;
-}
+static char daplink_debug_buf[128] = {0};
+
 
 static inline uint32_t daplink_debug(uint8_t *data, uint32_t size)
 {
+//    void LPUART_WriteByte(uint32_t instance, char ch);
+//    
+//    while(size--)
+//    {
+//         LPUART_WriteByte(0, *data++);
+//    }
     return 1;
 }
+
+static inline uint32_t daplink_debug_print(const char *format, ...)
+{
+//    uint32_t ret;
+//    int32_t r = 0;
+//    va_list arg;
+//    ret = 1;
+//    va_start(arg, format);
+//    r = vsnprintf(daplink_debug_buf, sizeof(daplink_debug_buf), format, arg);
+
+//    if (r >= sizeof(daplink_debug_buf)) {
+//        r = snprintf(daplink_debug_buf, sizeof(daplink_debug_buf), "<Error - string length %i exceeds print buffer>\r\n", r);
+//        ret = 0;
+//    }
+
+//    va_end(arg);
+//    daplink_debug((uint8_t *)daplink_debug_buf, r);
+    
+   
+    
+    return 1;
+}
+
+
 
 #endif
 

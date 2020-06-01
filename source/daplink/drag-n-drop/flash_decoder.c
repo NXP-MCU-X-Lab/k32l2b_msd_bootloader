@@ -81,6 +81,11 @@ flash_decoder_type_t flash_decoder_detect_type(const uint8_t *data, uint32_t siz
     if (validate_bin_nvic(data)) {
         return FLASH_DECODER_TYPE_TARGET;
     }
+    
+    if(data[0] == 'C' && data[1] == 'F' && data[2] == 'G')
+    {
+        return FLASH_DECODER_TYPE_CFGDATA;
+    }
 
     // If an address is specified then the data can be decoded
     if (addr_valid) {
@@ -120,6 +125,10 @@ error_t flash_decoder_get_flash(flash_decoder_type_t type, uint32_t addr, bool a
         } else if (FLASH_DECODER_TYPE_TARGET == type) {
             // "Target" update in this case would be a 3rd party interface application
             flash_start_local = DAPLINK_ROM_IF_START;
+            flash_intf_local = flash_intf_iap_protected;
+        } else if (FLASH_DECODER_TYPE_CFGDATA == type) {
+            // "Target" update in this case would be a 3rd party interface application
+            flash_start_local = DAPLINK_ROM_CONFIG_USER_START;
             flash_intf_local = flash_intf_iap_protected;
         } else {
             status = ERROR_FD_UNSUPPORTED_UPDATE;

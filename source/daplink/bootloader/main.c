@@ -227,6 +227,79 @@ __task void main_task(void)
     }
 }
 
+static void uart_init(void)
+{
+    uint16_t sbr, sbrTemp, i;
+    uint32_t osr, tempDiff, calculatedBaud, baudDiff;
+    
+    SIM->SCGC5 |= SIM_SCGC5_PORTA_MASK | SIM_SCGC5_PORTB_MASK | SIM_SCGC5_PORTC_MASK | SIM_SCGC5_LPUART0_MASK;
+    SIM->SOPT2 &= ~SIM_SOPT2_LPUART0SRC_MASK;
+    SIM->SOPT2 |= SIM_SOPT2_LPUART0SRC(1);    
+    PORTA->PCR[1] = PORT_PCR_MUX(2);
+    PORTA->PCR[2] = PORT_PCR_MUX(2);
+    
+    LPUART_Type *LPUARTx = LPUART0;
+    
+    uint32_t src_clock = 48*1000*1000;
+    uint32_t baud = 115200;
+    
+    
+    
+    /* disable Tx Rx first */
+    LPUARTx->CTRL &= ~(LPUART_CTRL_RE_MASK | LPUART_CTRL_TE_MASK);
+    
+    osr = 4;
+    sbr = (src_clock/(baud * osr));
+    calculatedBaud = (src_clock / (osr * sbr));
+    if (calculatedBaud > baud)
+    {
+        baudDiff = calculatedBaud - baud;
+    }
+    else
+    {
+        baudDiff = baud - calculatedBaud;
+    }
+    for (i = 5; i <= 32; i++)
+    {
+        /* calculate the temporary sbr value   */
+        sbrTemp = (src_clock/(baud * i));
+        /* calculate the baud rate based on the temporary osr and sbr values */
+        calculatedBaud = (src_clock / (i * sbrTemp));
+
+        if (calculatedBaud > baud)
+        {
+            tempDiff = calculatedBaud - baud;
+        }
+        else
+        {
+            tempDiff = baud - calculatedBaud;
+        }
+
+        if (tempDiff <= baudDiff)
+        {
+            baudDiff = tempDiff;
+            osr = i;  /* update and store the best osr value calculated */
+            sbr = sbrTemp;  /* update store the best sbr value calculated */
+        }
+    }
+
+    LPUARTx->BAUD &= ~LPUART_BAUD_SBR_MASK;
+    LPUARTx->BAUD &= ~LPUART_BAUD_OSR_MASK;
+    LPUARTx->BAUD |= LPUART_BAUD_SBR(sbr) | LPUART_BAUD_OSR(osr-1);
+    
+   
+    /* enable Tx Rx */
+    LPUARTx->CTRL |= (LPUART_CTRL_RE_MASK | LPUART_CTRL_TE_MASK);
+
+}
+
+
+void LPUART_WriteByte(uint32_t instance, char ch)
+{
+    while(!(LPUART0->STAT & LPUART_STAT_TDRE_MASK));
+    LPUART0->DATA = (ch & 0xFF);
+}
+
 int main(void)
 {
     // init leds and button
@@ -234,6 +307,10 @@ int main(void)
     // init settings
 //    config_init();
 
+ //   uart_init();
+
+    
+    
     // check for invalid app image or rst button press. Should be checksum or CRC but NVIC validation is better than nothing.
     // If the interface has set the hold in bootloader setting don't jump to app
     if (!gpio_get_reset_btn() && validate_bin_nvic((uint8_t *)target_device.flash_start) && !config_ram_get_initial_hold_in_bl()) {
@@ -243,6 +320,9 @@ int main(void)
         modify_stack_pointer_and_start_app((*(uint32_t *)(target_device.flash_start)), (*(uint32_t *)(target_device.flash_start + 4)));
     }
 
+
+    
+    
     // config the usb interface descriptor and web auth token before USB connects
     //unique_string_auth_config();
     // either the rst pin was pressed or we have an empty app region

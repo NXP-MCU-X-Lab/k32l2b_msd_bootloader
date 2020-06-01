@@ -155,7 +155,7 @@ static error_t program_page(uint32_t addr, const uint8_t *buf, uint32_t size)
     error_t status;
     uint32_t min_prog_size;
     uint32_t sector_size;
-    uint32_t updt_end = DAPLINK_ROM_UPDATE_START + DAPLINK_ROM_UPDATE_SIZE;
+    uint32_t updt_end = 256*1024;
 
     if (state != STATE_OPEN) {
         util_assert(0);
@@ -304,7 +304,7 @@ static error_t erase_sector(uint32_t addr)
 static error_t erase_chip(void)
 {
     uint32_t updt_start = DAPLINK_ROM_UPDATE_START;
-    uint32_t updt_end = DAPLINK_ROM_UPDATE_START + DAPLINK_ROM_UPDATE_SIZE;
+    uint32_t updt_end = 256*1024;
 
     if (state != STATE_OPEN) {
         util_assert(0);
@@ -370,7 +370,7 @@ static error_t intercept_page_write(uint32_t addr, const uint8_t *buf, uint32_t 
     error_t status;
     uint32_t crc_size;
     uint32_t updt_start = DAPLINK_ROM_UPDATE_START;
-    uint32_t updt_end = DAPLINK_ROM_UPDATE_START + DAPLINK_ROM_UPDATE_SIZE;
+    uint32_t updt_end = 256*1024;
 
     if (state != STATE_OPEN) {
         util_assert(0);
@@ -436,7 +436,7 @@ static error_t intercept_sector_erase(uint32_t addr)
 {
     error_t status;
     uint32_t updt_start = DAPLINK_ROM_UPDATE_START;
-    uint32_t updt_end = DAPLINK_ROM_UPDATE_START + DAPLINK_ROM_UPDATE_SIZE;
+    uint32_t updt_end = 256*1024;
 
     if (state != STATE_OPEN) {
         util_assert(0);

@@ -40,6 +40,7 @@ typedef enum {
     FLASH_DECODER_TYPE_BOOTLOADER,
     FLASH_DECODER_TYPE_INTERFACE,
     FLASH_DECODER_TYPE_TARGET,
+    FLASH_DECODER_TYPE_CFGDATA,
 } flash_decoder_type_t;
 
 flash_decoder_type_t flash_decoder_detect_type(const uint8_t *data, uint32_t size, uint32_t addr, bool addr_valid);

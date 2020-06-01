@@ -31,3 +31,33 @@ New feature: firmware can be shown when enter MSD boot loader mode. there will b
 
 
 
+20200604:
+
+
+
+**IMAGE DISPLAY**: there are two images show in DISK:
+
+ FW_DATA.BIN and  CF_DATA.BIN.
+
+* FW_DATA.BIN will show the flash data start at 0x0008000
+
+* CF_DATA.BIN will show the flash data start at 0x00016000
+
+
+
+**DATA PROGRAMMING:**
+
+* drag any valid K32l2b image(any file name) will programming at 0x8000.
+
+* drag config data will programming at 0x00016000
+
+config data:
+
+config data is defined as the first 3 byte of file must be 'C', 'F', 'G'. as in the example_app folder shows:
+
+![](./img/cfgdata.png)
+
+
+
+
+
