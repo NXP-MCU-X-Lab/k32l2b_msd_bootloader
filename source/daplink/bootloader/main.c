@@ -229,87 +229,119 @@ __task void main_task(void)
 
 static void uart_init(void)
 {
-    uint16_t sbr, sbrTemp, i;
-    uint32_t osr, tempDiff, calculatedBaud, baudDiff;
-    
-    SIM->SCGC5 |= SIM_SCGC5_PORTA_MASK | SIM_SCGC5_PORTB_MASK | SIM_SCGC5_PORTC_MASK | SIM_SCGC5_LPUART0_MASK;
-    SIM->SOPT2 &= ~SIM_SOPT2_LPUART0SRC_MASK;
-    SIM->SOPT2 |= SIM_SOPT2_LPUART0SRC(1);    
-    PORTA->PCR[1] = PORT_PCR_MUX(2);
-    PORTA->PCR[2] = PORT_PCR_MUX(2);
-    
-    LPUART_Type *LPUARTx = LPUART0;
-    
-    uint32_t src_clock = 48*1000*1000;
     uint32_t baud = 115200;
     
+    IOCON->PIO[0][0] |= IOCON_PIO_FUNC(1) | IOCON_PIO_DIGIMODE_MASK;
+    IOCON->PIO[0][1] |= IOCON_PIO_FUNC(1) | IOCON_PIO_DIGIMODE_MASK;
     
+    SYSCON->AHBCLKCTRL[1] |= SYSCON_AHBCLKCTRL_FLEXCOMM0_MASK
+                            | SYSCON_AHBCLKCTRL_FLEXCOMM1_MASK
+                            | SYSCON_AHBCLKCTRL_FLEXCOMM2_MASK
+                            | SYSCON_AHBCLKCTRL_FLEXCOMM3_MASK 
+                            | SYSCON_AHBCLKCTRL_FLEXCOMM4_MASK
+                            | SYSCON_AHBCLKCTRL_FLEXCOMM5_MASK
+                            | SYSCON_AHBCLKCTRL_FLEXCOMM6_MASK
+                            | SYSCON_AHBCLKCTRL_FLEXCOMM7_MASK;
     
-    /* disable Tx Rx first */
-    LPUARTx->CTRL &= ~(LPUART_CTRL_RE_MASK | LPUART_CTRL_TE_MASK);
+    FLEXCOMM0->PSELID &= ~FLEXCOMM_PSELID_PERSEL_MASK;
+    FLEXCOMM0->PSELID |= FLEXCOMM_PSELID_PERSEL(1);
+    SYSCON->FXCOMCLKSEL[0] = SYSCON_FXCOMCLKSEL_SEL(1);
     
-    osr = 4;
-    sbr = (src_clock/(baud * osr));
-    calculatedBaud = (src_clock / (osr * sbr));
-    if (calculatedBaud > baud)
+    uint32_t best_diff = (uint32_t)-1, best_osrval = 0xf, best_brgval = (uint32_t)-1;
+    uint32_t osrval, brgval, diff, baudrate;
+
+    uint32_t clk = 48*1000*1000;
+    
+    USART_Type *USARTx = USART0;
+    
+    for (osrval = best_osrval; osrval >= 4; osrval--)
     {
-        baudDiff = calculatedBaud - baud;
-    }
-    else
-    {
-        baudDiff = baud - calculatedBaud;
-    }
-    for (i = 5; i <= 32; i++)
-    {
-        /* calculate the temporary sbr value   */
-        sbrTemp = (src_clock/(baud * i));
-        /* calculate the baud rate based on the temporary osr and sbr values */
-        calculatedBaud = (src_clock / (i * sbrTemp));
-
-        if (calculatedBaud > baud)
+        brgval = (clk / ((osrval + 1) * baud)) - 1;
+        if (brgval > 0xFFFF)
         {
-            tempDiff = calculatedBaud - baud;
+            continue;
         }
-        else
+        baudrate = clk / ((osrval + 1) * (brgval + 1));
+        diff = baud < baudrate ? baudrate - baud : baud - baudrate;
+        if (diff < best_diff)
         {
-            tempDiff = baud - calculatedBaud;
-        }
-
-        if (tempDiff <= baudDiff)
-        {
-            baudDiff = tempDiff;
-            osr = i;  /* update and store the best osr value calculated */
-            sbr = sbrTemp;  /* update store the best sbr value calculated */
+            best_diff = diff;
+            best_osrval = osrval;
+            best_brgval = brgval;
         }
     }
 
-    LPUARTx->BAUD &= ~LPUART_BAUD_SBR_MASK;
-    LPUARTx->BAUD &= ~LPUART_BAUD_OSR_MASK;
-    LPUARTx->BAUD |= LPUART_BAUD_SBR(sbr) | LPUART_BAUD_OSR(osr-1);
+    USARTx->OSR = best_osrval;
+    USARTx->BRG = best_brgval;
     
-   
-    /* enable Tx Rx */
-    LPUARTx->CTRL |= (LPUART_CTRL_RE_MASK | LPUART_CTRL_TE_MASK);
+    USARTx->CTL = 0;
 
+    // Clear any pending flags (Just to be safe, isn't necessary after the peripheral reset)
+    USARTx->STAT = 0xFFFF;
+
+    // Enable USART
+    USARTx->CFG |= USART_CFG_ENABLE_MASK | USART_CFG_DATALEN(1);
 }
 
 
-void LPUART_WriteByte(uint32_t instance, char ch)
+void SetFROClock(uint32_t freq, bool val)
 {
-    while(!(LPUART0->STAT & LPUART_STAT_TDRE_MASK));
-    LPUART0->DATA = (ch & 0xFF);
+    uint32_t reg;
+    
+    if(val)
+    {
+        reg = SYSCON->FROCTRL;
+        
+        SYSCON->PDRUNCFG[0] &= ~SYSCON_PDRUNCFG_PDEN_FRO_MASK;
+        
+        reg |= SYSCON_FROCTRL_HSPDCLK_MASK | SYSCON_FROCTRL_USBCLKADJ_MASK;
+        (freq == 48*1000*1000)?(reg &= ~SYSCON_FROCTRL_SEL_MASK):(reg |= SYSCON_FROCTRL_SEL_MASK);
+        
+        SYSCON->FROCTRL = reg;
+    }
+    else
+    {
+        SYSCON->FROCTRL &= ~SYSCON_FROCTRL_HSPDCLK_MASK;
+    }
+}
+
+
+void UART_PutChar(uint32_t instance, uint8_t ch)
+{
+    while (!((USART0->STAT) & USART_STAT_TXIDLE_MASK));
+    USART0->FIFOWR = ch;
+}
+
+
+#include <stdio.h>
+struct __FILE 
+{ 
+	int handle;
+}; 
+/* FILE is typedef¡¯ d in stdio.h. */ 
+FILE __stdout;
+FILE __stdin;
+int fputc(int ch,FILE *f)
+{
+    UART_PutChar(0, ch);
+    return ch;
+}
+
+int fgetc(FILE *f)
+{
+    return 0;
 }
 
 int main(void)
 {
+    SetFROClock(48*1000*1000, true);
     // init leds and button
     gpio_init();
     // init settings
 //    config_init();
 
- //   uart_init();
-
-    
+    uart_init();
+    printf("CoreClock:%dHz\r\n", SystemCoreClock);
     
     // check for invalid app image or rst button press. Should be checksum or CRC but NVIC validation is better than nothing.
     // If the interface has set the hold in bootloader setting don't jump to app

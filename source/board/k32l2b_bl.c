@@ -17,7 +17,7 @@ target_cfg_t target_device = {
     .sector_cnt     = (DAPLINK_ROM_IF_SIZE / 1024),
     .flash_start    = DAPLINK_ROM_IF_START,
     .flash_end      = DAPLINK_ROM_IF_START + DAPLINK_ROM_IF_SIZE,
-    .ram_start      = 0x1FFFE000,
+    .ram_start      = 0x20000000,
     .ram_end        = 0x20006000,
     /* .flash_algo not needed for bootloader */
 };
