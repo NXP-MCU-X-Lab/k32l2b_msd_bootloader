@@ -36,7 +36,6 @@
 *.uvgui*
 output
 Doc
-settings
 Debug
 SI
 Tools
