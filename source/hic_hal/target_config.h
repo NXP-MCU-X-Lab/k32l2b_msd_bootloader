@@ -37,8 +37,7 @@ extern "C" {
  @{
 */
 
-// This can vary from target to target and should be in the structure or flash blob
-#define TARGET_AUTO_INCREMENT_PAGE_SIZE    (1024)
+
 
 /**
  @struct target_cfg_t

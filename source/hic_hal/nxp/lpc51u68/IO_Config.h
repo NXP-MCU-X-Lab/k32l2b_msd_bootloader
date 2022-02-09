@@ -84,8 +84,8 @@
 #define PIN_CDC_LED             (1<<PIN_CDC_LED_BIT)
 
 // SW RESET BUTTON PTB1
-#define PIN_SW_RESET_PORT       PORTC
-#define PIN_SW_RESET_BIT        (3)
+#define PIN_SW_RESET_PORT       (1)
+#define PIN_SW_RESET_BIT        (0)
 #define PIN_SW_RESET            (1<<PIN_SW_RESET_BIT)
 
 // Connected LED                Not available

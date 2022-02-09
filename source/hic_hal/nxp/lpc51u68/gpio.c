@@ -38,7 +38,7 @@ void gpio_init(void)
     IOCON->PIO[PIN_HID_LED_GPIO][PIN_HID_LED_BIT] |= IOCON_PIO_FUNC(0) | IOCON_PIO_DIGIMODE_MASK;
     IOCON->PIO[PIN_MSC_LED_PORT][PIN_MSC_LED_BIT] |= IOCON_PIO_FUNC(0) | IOCON_PIO_DIGIMODE_MASK;
     IOCON->PIO[PIN_CDC_LED_PORT][PIN_CDC_LED_BIT] |= IOCON_PIO_FUNC(0) | IOCON_PIO_DIGIMODE_MASK;
-    
+    IOCON->PIO[PIN_SW_RESET_PORT][PIN_SW_RESET_BIT] |= IOCON_PIO_FUNC(0) | IOCON_PIO_DIGIMODE_MASK;
 
     
 //    // configure pin as GPIO
@@ -58,7 +58,7 @@ void gpio_init(void)
     GPIO->DIR[PIN_CDC_LED_PORT] |= (1 << PIN_CDC_LED_BIT);
 //    PIN_POWER_EN_GPIO->PDDR |= PIN_POWER_EN;
 //    // set as input
-//    PIN_SW_RESET_GPIO->PDDR &= ~PIN_SW_RESET;
+    GPIO->DIR[PIN_SW_RESET_PORT] &= ~(1 << PIN_SW_RESET_BIT);
 
     // Let the voltage rails stabilize.  This is especailly important
     // during software resets, since the target's 3.3v rail can take
@@ -92,8 +92,7 @@ uint8_t gpio_get_reset_btn_no_fwrd(void)
 uint8_t gpio_get_reset_btn_fwrd(void)
 {
     static volatile  int i = 0;
-//    i = (PIN_SW_RESET_GPIO->PDIR & PIN_SW_RESET) ? 0 : 1;
-  //  i = i;
+    i = (GPIO->PIN[PIN_SW_RESET_PORT] & PIN_SW_RESET) ? 0 : 1;
     return i;
 }
 

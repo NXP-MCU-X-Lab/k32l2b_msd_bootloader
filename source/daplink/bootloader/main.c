@@ -303,6 +303,7 @@ void SetFROClock(uint32_t freq, bool val)
     {
         SYSCON->FROCTRL &= ~SYSCON_FROCTRL_HSPDCLK_MASK;
     }
+
 }
 
 
@@ -335,14 +336,18 @@ int fgetc(FILE *f)
 int main(void)
 {
     SetFROClock(48*1000*1000, true);
+    
+    /* set FRO48M */
+    
+    SystemCoreClock = 12*1000*1000;
+    
     // init leds and button
     gpio_init();
     // init settings
 //    config_init();
 
     uart_init();
-    printf("CoreClock:%dHz\r\n", SystemCoreClock);
-    
+    printf("lpc51u68 msd bl, core clock:%dHz\r\n", SystemCoreClock);
     // check for invalid app image or rst button press. Should be checksum or CRC but NVIC validation is better than nothing.
     // If the interface has set the hold in bootloader setting don't jump to app
     if (!gpio_get_reset_btn() && validate_bin_nvic((uint8_t *)target_device.flash_start) && !config_ram_get_initial_hold_in_bl()) {

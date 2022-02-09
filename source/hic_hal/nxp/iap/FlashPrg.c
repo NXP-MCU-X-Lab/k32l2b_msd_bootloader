@@ -1,98 +1,53 @@
-/**
- * @file    FlashPrg.c
- * @brief
- *
- * DAPLink Interface Firmware
- * Copyright (c) 2009-2016, ARM Limited, All Rights Reserved
- * SPDX-License-Identifier: Apache-2.0
- *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may
- * not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 
-#include "FlashOS.h"        // FlashOS Structures
-#include "fsl_flash.h"
+#include "LPC51U68.h"
 #include "string.h"
 #include "cortex_m.h"
+#include "stdio.h"
 
-flash_config_t g_flash; //!< Storage for flash driver.
 
-uint32_t Init(uint32_t adr, uint32_t clk, uint32_t fnc)
+unsigned long CCLK = 12000;            // CCLK in kHz
+
+struct sIAP
+{                  // IAP Structure
+    unsigned long cmd;           // Command
+    unsigned long par[4];        // Parameters
+    unsigned long stat;          // Status
+    unsigned long res[2];        // Result
+} IAP;
+
+/* IAP Call */
+typedef void (*IAP_Entry) (unsigned long *cmd, unsigned long *stat);
+
+#define IAP_Call ((IAP_Entry) 0x03000205)
+#define PHY_PAGE_SIZE       (256)       /* actual flash page size */
+#define SECTOR_SIZE         (32*1024)
+
+
+unsigned long GetSecNum (unsigned long adr)
 {
-//    cortex_int_state_t state = cortex_int_get_and_disable();
-//#if defined (WDOG)
-//    /* Write 0xC520 to the unlock register */
-//    WDOG->UNLOCK = 0xC520;
-//    /* Followed by 0xD928 to complete the unlock */
-//    WDOG->UNLOCK = 0xD928;
-//    /* Clear the WDOGEN bit to disable the watchdog */
-//    WDOG->STCTRLH &= ~WDOG_STCTRLH_WDOGEN_MASK;
-//#else
-//    SIM->COPC = 0x00u;
-//#endif
-//    cortex_int_restore(state);
+    unsigned long n;
 
-//    return (FLASH_Init(&g_flash) != kStatus_Success);
+    n = adr / SECTOR_SIZE;
+    return (n);
 }
 
 
-/*
- *  De-Initialize Flash Programming Functions
- *    Parameter:      fnc:  Function Code (1 - Erase, 2 - Program, 3 - Verify)
- *    Return Value:   0 - OK,  1 - Failed
- */
+uint32_t Init(uint32_t adr, uint32_t clk, uint32_t fnc)
+{
+    printf("%s\r\n", __FUNCTION__);
+    CCLK = SystemCoreClock/1000;
+    return 0;
+}
+
 
 uint32_t UnInit(uint32_t fnc)
 {
+    //printf("%s\r\n", __FUNCTION__);
     return (0);
 }
 
 
-/*  Blank Check Block in Flash Memory
- *    Parameter:      adr:  Block Start Address
- *                    sz:   Block Size (in bytes)
- *                    pat:  Block Pattern
- *    Return Value:   0 - OK,  1 - Failed
- */
 
-// int BlankCheck (unsigned long adr, unsigned long sz, unsigned char pat)
-// {
-//     return (flash_verify_erase(&g_flash, adr, sz, kFlashMargin_Normal) != kStatus_Success);
-// }
-//
-// /*
-//  *  Verify Flash Contents
-//  *    Parameter:      adr:  Start Address
-//  *                    sz:   Size (in bytes)
-//  *                    buf:  Data
-//  *    Return Value:   (adr+sz) - OK, Failed Address
-//  */
-// unsigned long Verify (unsigned long adr, unsigned long sz, unsigned char *buf)
-// {
-//     uint32_t failedAddress;
-//     status_t status = flash_verify_program(&g_flash, adr, sz,
-//                               (const uint8_t *)buf, kFlashMargin_Normal,
-//                               &failedAddress, NULL);
-//
-//     if (status == kStatus_Success)
-//     {
-//         // Finished without Errors
-//         return (adr+sz);
-//     }
-//     else
-//     {
-//         return failedAddress;
-//     }
-// }
 
 /*
  *  Erase complete Flash Memory
@@ -100,14 +55,34 @@ uint32_t UnInit(uint32_t fnc)
  */
 uint32_t EraseChip(void)
 {
-//    cortex_int_state_t state = cortex_int_get_and_disable();
-//    int status = FLASH_EraseAll(&g_flash, kFLASH_apiEraseKey);
-//    if (status == kStatus_Success)
-//    {
-//        status = FLASH_VerifyEraseAll(&g_flash, kFLASH_marginValueNormal);
-//    }
-//    cortex_int_restore(state);
-//    return status;
+    //printf("%s\r\n", __FUNCTION__);
+    return 0;
+}
+
+uint8_t FLASH_EraseSector(uint32_t addr)
+{
+    unsigned long n;
+
+    n = GetSecNum(addr);                          // Get Sector Number
+
+    IAP.cmd    = 50;                             // Prepare Sector for Erase
+    IAP.par[0] = n;                              // Start Sector
+    IAP.par[1] = n;                              // End Sector
+    __disable_irq();
+    IAP_Call (&IAP.cmd, &IAP.stat);              // Call IAP Command
+    __enable_irq();
+    if (IAP.stat) return (1);                    // Command Failed
+
+    IAP.cmd    = 52;                             // Erase Sector
+    IAP.par[0] = n;                              // Start Sector
+    IAP.par[1] = n;                              // End Sector
+    IAP.par[2] = CCLK;                           // CCLK in kHz
+    __disable_irq();
+    IAP_Call (&IAP.cmd, &IAP.stat);              // Call IAP Command
+    __enable_irq();
+    if (IAP.stat) return (1);                    // Command Failed
+
+    return (0);                                  // Finished without Errors
 }
 
 /*
@@ -117,14 +92,38 @@ uint32_t EraseChip(void)
  */
 uint32_t EraseSector(uint32_t adr)
 {
-//    cortex_int_state_t state = cortex_int_get_and_disable();
-//    int status = FLASH_Erase(&g_flash, adr, g_flash.PFlashSectorSize, kFLASH_apiEraseKey);
-//    if (status == kStatus_Success)
-//    {
-//        status = FLASH_VerifyErase(&g_flash, adr, g_flash.PFlashSectorSize, kFLASH_marginValueNormal);
-//    }
-//    cortex_int_restore(state);
-//    return status;
+    printf("%s 0x%08X\r\n", __FUNCTION__, adr);
+    FLASH_EraseSector(adr);
+    return 0;
+}
+
+
+
+uint8_t FLASH_WritePage(uint32_t addr, const uint8_t *buf)
+{
+    unsigned long n;
+
+    n = GetSecNum(addr);                          // Get Sector Number
+  
+    IAP.cmd    = 50;                             // Prepare Sector for Write
+    IAP.par[0] = n;                              // Start Sector
+    IAP.par[1] = n;                              // End Sector
+    __disable_irq();
+    IAP_Call (&IAP.cmd, &IAP.stat);              // Call IAP Command
+    __enable_irq();
+    if (IAP.stat) return (1);                    // Command Failed
+
+    IAP.cmd    = 51;                             // Copy RAM to Flash
+    IAP.par[0] = addr;                            // Destination Flash Address
+    IAP.par[1] = (unsigned long)buf;             // Source RAM Address
+    IAP.par[2] = PHY_PAGE_SIZE;                 // Fixed Page Size
+    IAP.par[3] = CCLK;                           // CCLK in kHz
+    __disable_irq();
+    IAP_Call (&IAP.cmd, &IAP.stat);              // Call IAP Command
+    __enable_irq();
+    if (IAP.stat) return (1);                    // Command Failed
+
+    return 0;
 }
 
 /*
@@ -136,16 +135,16 @@ uint32_t EraseSector(uint32_t adr)
  */
 uint32_t ProgramPage(uint32_t adr, uint32_t sz, uint32_t *buf)
 {
-//    cortex_int_state_t state = cortex_int_get_and_disable();
-//    int status = FLASH_Program(&g_flash, adr, buf, sz);
-//    if (status == kStatus_Success)
-//    {
-//        // Must use kFlashMargin_User, or kFlashMargin_Factory for verify program
-//        status = FLASH_VerifyProgram(&g_flash, adr, sz,
-//                              buf, kFLASH_marginValueUser,
-//                              NULL, NULL);
-//    }
-//    cortex_int_restore(state);
-//    return status;
+    int len = 0;
+    uint8_t *p;
+    printf("write page:0x%08X sz:%d\r\n", adr, sz);
+    while(len < sz)
+    {
+        p = (uint8_t*)buf + len;
+        FLASH_WritePage(adr+len, p);
+        len += PHY_PAGE_SIZE;
+        printf("len:%d buf[1]:0x%X\r\n", len, p[1]);
+    }
+    return 0;
 }
 

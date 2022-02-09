@@ -137,10 +137,10 @@ void USBD_Init(void)
     USB0->DATABUFSTART = EP_BUF_BASE & 0xFFC00000;
     USB0->EPLISTSTART  = EP_LIST_BASE;
     IOCON->PIO[1][6] = IOCON_PIO_FUNC(7) | IOCON_PIO_DIGIMODE_MASK | IOCON_PIO_MODE(0);
-    NVIC_EnableIRQ(USB0_IRQn);
+
 
     USBD_Reset();
-    printf("%s\r\n", __FUNCTION__);
+    NVIC_EnableIRQ(USB0_IRQn);
 }
 
 
