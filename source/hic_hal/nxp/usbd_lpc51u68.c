@@ -41,7 +41,7 @@
 #define EP_OUT_IDX(EPNum)  (EPNum * 2    )
 #define EP_IN_IDX(EPNum)   (EPNum * 2 + 1)
 
-#define EP_LIST_BASE       0x20004000
+#define EP_LIST_BASE       0x4000000
 #define EP_BUF_BASE        (U32)(EP_LIST_BASE + 0x100)
 
 typedef struct BUF_INFO {

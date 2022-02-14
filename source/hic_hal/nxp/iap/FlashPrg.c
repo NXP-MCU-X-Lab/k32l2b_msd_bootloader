@@ -34,7 +34,7 @@ unsigned long GetSecNum (unsigned long adr)
 
 uint32_t Init(uint32_t adr, uint32_t clk, uint32_t fnc)
 {
-    printf("%s\r\n", __FUNCTION__);
+    //printf("%s\r\n", __FUNCTION__);
     CCLK = SystemCoreClock/1000;
     return 0;
 }
@@ -92,7 +92,7 @@ uint8_t FLASH_EraseSector(uint32_t addr)
  */
 uint32_t EraseSector(uint32_t adr)
 {
-    printf("%s 0x%08X\r\n", __FUNCTION__, adr);
+   // printf("%s 0x%08X\r\n", __FUNCTION__, adr);
     FLASH_EraseSector(adr);
     return 0;
 }
@@ -137,13 +137,13 @@ uint32_t ProgramPage(uint32_t adr, uint32_t sz, uint32_t *buf)
 {
     int len = 0;
     uint8_t *p;
-    printf("write page:0x%08X sz:%d\r\n", adr, sz);
+   // printf("write page:0x%08X sz:%d\r\n", adr, sz);
     while(len < sz)
     {
         p = (uint8_t*)buf + len;
         FLASH_WritePage(adr+len, p);
         len += PHY_PAGE_SIZE;
-        printf("len:%d buf[1]:0x%X\r\n", len, p[1]);
+       // printf("len:%d buf[1]:0x%X\r\n", len, p[1]);
     }
     return 0;
 }
